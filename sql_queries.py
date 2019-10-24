@@ -45,7 +45,7 @@ staging_songs_table_create = ("""
         num_songs INT,
         artist_id VARCHAR,
         artist_latitude VARCHAR,
-        artist_logitude VARCHAR,
+        artist_longitude VARCHAR,
         artist_location VARCHAR,
         artist_name VARCHAR,
         song_id VARCHAR,
@@ -92,10 +92,10 @@ song_table_create = ("""
 artist_table_create = ("""
     CREATE TABLE IF NOT EXISTS artist_table(
         artist_id VARCHAR PRIMARY KEY,
-        artist_name VARCHAR NOT NULL,
-        artist_location VARCHAR,
-        artist_latitude VARCHAR,
-        artist_longitude VARCHAR
+        name VARCHAR NOT NULL,
+        location VARCHAR,
+        latitude VARCHAR,
+        longitude VARCHAR
     );
 """)
 
@@ -117,18 +117,24 @@ time_table_create = ("""
 staging_events_copy = ("""
     COPY staging_events 
     FROM {} 
-    CREDENTIALS 'aws_iam_role=arn:aws:iam::301222643146:role/dwhRole'
-    JSON {}
+    REGION 'us-west-2' 
+    iam_role 'arn:aws:iam::301222643146:role/dwhRole'
+    COMPUPDATE OFF STATUPDATE OFF
+    FORMAT AS JSON {}
+    TIMEFORMAT AS 'epochmillisecs';
 """).format(config.get('S3','LOG_DATA'), 
             #config.get('IAM_ROLE','ARN'), 
             config.get('S3','LOG_JSONPATH')
            )
 
 staging_songs_copy = ("""
-    COPY staging_events FROM {}
-    CREDENTIALS 'aws_iam_role=arn:aws:iam::301222643146:role/dwhRole'
-    REGION 'us-west-2' COMPUPDATE OFF
-    JSON 'auto';
+    COPY staging_songs
+    FROM {}
+    REGION 'us-west-2' 
+    iam_role 'arn:aws:iam::301222643146:role/dwhRole'
+    COMPUPDATE OFF STATUPDATE OFF
+    JSON 'auto'
+    TIMEFORMAT AS 'epochmillisecs';
 """).format(config.get('S3','SONG_DATA'))#, 
             #config.get('IAM_ROLE','ARN')
 #            )
@@ -140,20 +146,20 @@ songplay_table_insert = ("""
         start_time, user_id, level, song_id, 
         artist_id, session_id, location, user_agent
     )
-    SELECT
-        ev.start_time,
-        ev.user_id,
-        ev.level,
-        sg.song_id,
-        sg.artist_id,
-        ev.session_id,
-        ev.location,
-        ev.user_agent
-    FROM staging_events AS ev
-    JOIN staging_songs AS sg
-        ON (ev.artist = sg.artist_name)
-        AND (ev.song = sg.title)
-        AND (ev.length = sg.duration)
+        SELECT DISTINCT
+            ev.ts,
+            ev.userID,
+            ev.level,
+            sg.song_id,
+            sg.artist_id,
+            ev.sessionId,
+            ev.location,
+            ev.userAgent
+        FROM staging_events AS ev
+        JOIN staging_songs AS sg
+            ON (ev.artist = sg.artist_name)
+            AND (ev.song = sg.title)
+            AND (ev.length = sg.duration)
         WHERE ev.page = 'NextSong';
 """)
 
@@ -181,13 +187,13 @@ song_table_insert = ("""
 
 artist_table_insert = ("""
     INSERT INTO artist_table (
-        artist_id, name, location, lattitude, longitude
+        artist_id, name, location, latitude, longitude
     )
     SELECT DISTINCT
         artist_id, 
         artist_name, 
         artist_location, 
-        artist_lattitude, 
+        artist_latitude, 
         artist_longitude
     FROM
         staging_songs;
@@ -198,22 +204,23 @@ time_table_insert = ("""
         session_id, start_time, hour, day, week, month, year, weekday
     )
     SELECT DISTINCT
-        session_id,
+        sessionId,
         ts,
-        EXTRACT(HOUR FROM t_start_time) AS hour,
-        EXTRACT(DAY FROM t_start_time) AS day,
-        EXTRACT(WEEK FROM t_start_time) AS week,
-        EXTRACT(MONTH FROM t_start_time) AS month,
-        EXTRACT(YEAR FROM t_start_time) AS year,
-        EXTRACT(WEEKDAY FROM t_start_time) AS weekday
-    FROM (
-        SELECT DISTINCT 
-            ts, 
-            '1970-01-01'::date + ts/1000 * interval '1 second' as t_start_time
-        FROM
-            staging_events
-    );
+        EXTRACT(HOUR FROM ts) AS hour,
+        EXTRACT(DAY FROM ts) AS day,
+        EXTRACT(WEEK FROM ts) AS week,
+        EXTRACT(MONTH FROM ts) AS month,
+        EXTRACT(YEAR FROM ts) AS year,
+        EXTRACT(WEEKDAY FROM ts) AS weekday
+    FROM
+        staging_events;
 """)
+#     FROM (
+#         SELECT DISTINCT 
+#             ts, 
+#             '1970-01-01'::date + ts/1000 * interval '1 second' as t_start_time
+#     );
+# """)
 
 # QUERY LISTS
 
