@@ -1,4 +1,5 @@
 
+
 # Project4 - Data Warehouse 
 #### A project from Udacity's Data Engineering course
 The code was written along the lines of the default Jupyter notebook workspace provided by Udemy.
@@ -14,19 +15,46 @@ For this we created tables to receive raw data from S3 and tables in the star sc
 
 The data structure is shown in the relationship image below.
 
-IMAGE
+[//]: ![ERM](SchemaProject4.png)
+
+![ERM](https://lh3.googleusercontent.com/A-qANQGkEkh4vuJw5VaVlPKkEmGgz8NBPMOTiubQZ6WpDY8MhkTleGx55FUIgXLewrDtrGTa_ag)
 
 The `staging_events` and` staging_songs` tables are used to store raw data, while the `songplay_table`,` user_table`, `song_table`,` artist_table` and `time_table` tables are part of the star schema. The `songplay_table` is the fact table and contains the IDs for the relationship to the dimensional tables.
 
-### Querys
-The querys are coded in the `sql_queries.py`.
+### Queries
+The queries are coded in the `sql_queries.py`. 
+- We have queries to drop tables if already exists to ensure that there will be no errors in creating the new tables;
+- We have queries to creating tables defining data types and their relationships;
+- We have queries to copy raw data from S3 storage to cluster database on Redshift;
+- We have queries to get data from staging tables and insert into star schema tables;
+- And we have lists of the above queries to automate the execution process.
 
-### Create Tables
+### Create Tables Process
 The code for creating the tables is in the `create_tables.py` file.
+We can execute the script using the `python3 create_tables.py` command in a terminal. 
+The Create Tables script reads the cluster-hosted database configuration to connect to and create the table schema. Table drop and creation occurs with the following functions:
+- `drop_tables(cur, conn)`: Iterate over a list of table drop queries to execute and commit to. Receive parameters to connect to database and connection to data;
+- `create_tables(cur, conn)`: Iterate over a list of table create queries to execute and commit to. Receive parameters to connect to database and connection to data.
+
+### ETL Process
+The code for extract, transform and load process is in the `etl.py` file.
+After execute `create_tables.py`, we can execute this script using the `python3 etl.py` command in a terminal. 
+The ETL script connects to Redshift and inserts data from S3 storage into the cluster database. The process is performed through the functions:
+- `load_staging_tables(cur, conn)`: Iterate over a list of staging table load queries to execute and commit to. Receive parameters to connect to database and connection to data.
+- `insert_tables(cur, conn)`:  Iterate over a list of insert table queries to execute and commit to. Receive parameters to connect to database and connection to data.
+
+### Cluster
+The `upCluster.ipnyb` file is a notebook for creating, configuring, and connecting the Redshift cluster. As well as connecting to S3 storage, creating an IAM role for S3 access, connecting to the PostgreSQL database, and deleting the cluster. 
+This file was created based on `Exercise 2: Infrastructure as Code` from lesson 2 of chapter 3 of the Udacity Data Engineering course.
+
+### Database
+Now we can verify in the Redshift database that the data is entered and perform queries for validation.
 
 
-## Querys de teste
-1. Quantas artistas tem no banco?
+## Validation Queries
+Next, we have some queries that can be executed directly in Redshift and their results.
+
+1. How many artists are in the bank?
 ```
     SELECT count(*) FROM artist_table;
 ```
@@ -34,7 +62,7 @@ The code for creating the tables is in the `create_tables.py` file.
         10025
 
 
-2. Quais músicas o usuário 97 ouviu? Qual nome do artista? Duração? Sessão (ordenado)?
+2. What songs did user 97 listen to? What artist's name? Duration? Sorted by session?
 ```
     SELECT
         us.first_name,
@@ -72,7 +100,7 @@ The code for creating the tables is in the `create_tables.py` file.
 | Kate       | 147        | Girlfriend In A Coma                                 | The Smiths            | 123      |
 | Kate       | 147        | You're The One                                       | Dwight Yoakam         | 239      |
 
-3. De qual cidade é a banda 'Foo Fighters'?
+3. Which city is the band 'Foo Fighters'?
 ```
     SELECT 
         at.location
@@ -84,7 +112,7 @@ The code for creating the tables is in the `create_tables.py` file.
 > **Answer:**
 	 Seattle, WA
 
-4. Qual a sessão com mais músicas? Qual o usuário?
+4. What's the session with the most songs? What is the user?
 ```
     SELECT
         sp.session_id,
@@ -113,7 +141,7 @@ The code for creating the tables is in the `create_tables.py` file.
 | 888        | Mohammad   | Rodriguez | 20    |
 | 574        | Tegan      | Levine    | 20    |
 
-5. Quem ouviu a música 'Fade To Black'? Quantas vezes? Em quais sessões? Nome(ordenado) e Sobrenome.
+5. Who listened to the song 'Fade To Black'? How many times? In which sessions? First Name (sorted) and Last Name.
 ```
     SELECT
         us.first_name,
@@ -147,7 +175,7 @@ The code for creating the tables is in the `create_tables.py` file.
 | Aiden      | Hess      | 869        | 1     |
 | Sienna     | Colon     | 317        | 1     |
 
-6. Quantas mulheres pagam?
+6. How many women pay?
 ```
     SELECT count(*)
     FROM (SELECT gender, level FROM user_table AS us)
@@ -157,7 +185,7 @@ The code for creating the tables is in the `create_tables.py` file.
 >**Answer:**
 		7
 
-7. TOP 10 músicas mais ouvidas.
+7. TOP 10 most listened songs.
 ```
     SELECT
         sg.title,

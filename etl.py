@@ -5,6 +5,15 @@ from time import time
 
 
 def load_staging_tables(cur, conn):
+    """
+        Run querys to load staging tables.
+        
+        Iterate over a list of staging table load queries to execute and commit to.
+        
+        Parameters:
+        Argument1: Cursor to connect to database
+        Argument2: Connection to data
+    """
     for query in copy_table_queries:
         print("-----------------------------------------\n \
                 Query running:\n {}".format(query))
@@ -16,6 +25,15 @@ def load_staging_tables(cur, conn):
 
 
 def insert_tables(cur, conn):
+    """
+        Run querys to create tables.
+        
+        Iterate over a list of insert table queries to execute and commit to.
+        
+        Parameters:
+        Argument1: Cursor to connect to database
+        Argument2: Connection to data
+    """
     for query in insert_table_queries:
         print("-----------------------------------------\n \
                 Query running:\n {}".format(query))
@@ -27,6 +45,11 @@ def insert_tables(cur, conn):
 
 
 def main():
+    """
+        Main function that manages the ETL process.
+        
+        Connect to Redshift cluster database and inserts data from S3 storage.
+    """
     config = configparser.ConfigParser()
     config.read('dwh.cfg')
 

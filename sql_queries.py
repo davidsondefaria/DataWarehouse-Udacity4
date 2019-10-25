@@ -1,6 +1,5 @@
 import configparser
 
-
 # CONFIG
 config = configparser.ConfigParser()
 config.read('dwh.cfg')
@@ -215,12 +214,6 @@ time_table_insert = ("""
     FROM
         staging_events;
 """)
-#     FROM (
-#         SELECT DISTINCT 
-#             ts, 
-#             '1970-01-01'::date + ts/1000 * interval '1 second' as t_start_time
-#     );
-# """)
 
 # QUERY LISTS
 
